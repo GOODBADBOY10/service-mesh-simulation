@@ -1,0 +1,11 @@
+/mnt/c/Users/USER/dev-stuff/rust/service-mesh-simulation/auth-service/target/debug/deps/url-aaf138df19526bea.d: /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/lib.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/host.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/origin.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/parser.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/path_segments.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/slicing.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/quirks.rs
+
+/mnt/c/Users/USER/dev-stuff/rust/service-mesh-simulation/auth-service/target/debug/deps/liburl-aaf138df19526bea.rmeta: /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/lib.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/host.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/origin.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/parser.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/path_segments.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/slicing.rs /home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/quirks.rs
+
+/home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/lib.rs:
+/home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/host.rs:
+/home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/origin.rs:
+/home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/parser.rs:
+/home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/path_segments.rs:
+/home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/slicing.rs:
+/home/goodbadboy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/url-2.5.7/src/quirks.rs:
