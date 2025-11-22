@@ -785,6 +785,468 @@ struct UpdateProfileRequest {
 - Consider caching validated tokens briefly
 
 
+# 🌐 Gateway Service
+
+An API Gateway microservice built with Rust and Axum. Acts as the single entry point for all client requests, routing them to appropriate internal services. Part of a service mesh simulation project.
+
+## 📋 Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [API Routes](#api-routes)
+- [Usage Examples](#usage-examples)
+- [Error Handling](#error-handling)
+- [Request Flow](#request-flow)
+- [Configuration](#configuration)
+
+## Overview
+
+The Gateway Service is the **single entry point** for all external clients. Instead of clients communicating directly with internal services, they send all requests to the gateway, which then routes them to the appropriate service.
+
+### Why Use a Gateway?
+
+```
+Without Gateway:                    With Gateway:
+                                    
+Client ──► Auth Service             Client ──► Gateway ──► Auth Service
+Client ──► User Service                              └──► User Service
+                                    
+❌ Multiple endpoints               ✅ Single endpoint
+❌ Services exposed                 ✅ Services hidden
+❌ No central control               ✅ Central logging/auth
+```
+
+## Features
+
+- ✅ Single entry point for all API requests
+- ✅ Request routing to internal services
+- ✅ Header forwarding (Authorization tokens)
+- ✅ Response proxying with status code preservation
+- ✅ Service health monitoring
+- ✅ Centralized error handling
+- ✅ Clean API namespace (`/api/*`)
+
+## Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| **Rust** | Programming language |
+| **Axum** | Web framework |
+| **Tokio** | Async runtime |
+| **Reqwest** | HTTP client for service communication |
+| **Serde** | JSON handling |
+| **thiserror** | Error definitions |
+| **anyhow** | Error handling |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       GATEWAY SERVICE                            │
+│                       (localhost:3002)                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   External Requests                                              │
+│         │                                                        │
+│         ▼                                                        │
+│   ┌──────────────────────────────────────────────────────────┐  │
+│   │                      Router                               │  │
+│   │                                                           │  │
+│   │   /api/register ──┐      ┌── /api/users                  │  │
+│   │   /api/login ─────┼──────┼── /api/users/:id              │  │
+│   │   /api/validate ──┘      └── (CRUD operations)           │  │
+│   └───────────┬────────────────────────┬─────────────────────┘  │
+│               │                        │                         │
+│               ▼                        ▼                         │
+│   ┌───────────────────┐    ┌───────────────────┐                │
+│   │   Auth Handlers   │    │   User Handlers   │                │
+│   └─────────┬─────────┘    └─────────┬─────────┘                │
+│             │                        │                           │
+│             │    Reqwest (HTTP)      │                           │
+│             ▼                        ▼                           │
+│   ┌───────────────────┐    ┌───────────────────┐                │
+│   │   Auth Service    │    │   User Service    │                │
+│   │  localhost:3000   │    │  localhost:3001   │                │
+│   └───────────────────┘    └───────────────────┘                │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Project Structure
+
+```
+gateway-service/
+├── src/
+│   ├── main.rs           # Application entry point
+│   ├── route.rs          # Route definitions
+│   ├── state.rs          # Shared application state
+│   ├── error.rs          # Custom error types
+│   ├── health_check.rs   # Health check handler
+│   └── handlers/
+│       ├── mod.rs        # Handler module exports
+│       ├── auth.rs       # Auth service forwarding
+│       └── users.rs      # User service forwarding
+├── Cargo.toml
+└── README.md
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Rust (1.70 or higher)
+- Cargo
+- Auth Service running on port 3000
+- User Service running on port 3001
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd gateway-service
+```
+
+2. Build the project:
+```bash
+cargo build
+```
+
+3. **Start internal services first:**
+```bash
+# Terminal 1 - Auth Service
+cd auth-service
+cargo run
+# Running on http://localhost:3000
+
+# Terminal 2 - User Service
+cd user-service
+cargo run
+# Running on http://localhost:3001
+```
+
+4. Start the Gateway Service:
+```bash
+# Terminal 3 - Gateway Service
+cd gateway-service
+cargo run
+# Running on http://localhost:3002
+```
+
+### Dependencies
+
+```toml
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
+thiserror = "1.0"
+anyhow = "1.0"
+```
+
+## API Routes
+
+### Health Check
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Gateway health check |
+
+### Auth Routes (→ Auth Service)
+
+| Method | Gateway Endpoint | Internal Route | Description |
+|--------|------------------|----------------|-------------|
+| `POST` | `/api/register` | `/register` | Register new user |
+| `POST` | `/api/login` | `/login` | Login and get token |
+| `POST` | `/api/validate` | `/validate` | Validate JWT token |
+
+### User Routes (→ User Service)
+
+| Method | Gateway Endpoint | Internal Route | Description |
+|--------|------------------|----------------|-------------|
+| `GET` | `/api/users` | `/users` | Get all users |
+| `POST` | `/api/users` | `/users` | Create user profile |
+| `GET` | `/api/users/:id` | `/users/:id` | Get user by ID |
+| `PUT` | `/api/users/:id` | `/users/:id` | Update user profile |
+| `DELETE` | `/api/users/:id` | `/users/:id` | Delete user profile |
+
+## Usage Examples
+
+### Health Check
+
+```bash
+curl http://localhost:3002/
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "service": "gateway-service",
+  "message": "Gateway service is running",
+  "routes": {
+    "auth": {
+      "register": "POST /api/register",
+      "login": "POST /api/login",
+      "validate": "POST /api/validate"
+    },
+    "users": {
+      "get_all": "GET /api/users",
+      "create": "POST /api/users",
+      "get_one": "GET /api/users/:id",
+      "update": "PUT /api/users/:id",
+      "delete": "DELETE /api/users/:id"
+    }
+  }
+}
+```
+
+### Register User
+
+```bash
+curl -X POST http://localhost:3002/api/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "alice",
+    "email": "alice@example.com",
+    "password": "securePassword123"
+  }'
+```
+
+**Response:**
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "alice",
+  "message": "User registered successfully"
+}
+```
+
+### Login
+
+```bash
+curl -X POST http://localhost:3002/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "alice",
+    "password": "securePassword123"
+  }'
+```
+
+**Response:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "expires_in": 86400
+}
+```
+
+### Create User Profile
+
+```bash
+curl -X POST http://localhost:3002/api/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-token>" \
+  -d '{
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "alice",
+    "email": "alice@example.com",
+    "full_name": "Alice Smith",
+    "bio": "Software developer"
+  }'
+```
+
+### Get User Profile
+
+```bash
+curl http://localhost:3002/api/users/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <your-token>"
+```
+
+### Update User Profile
+
+```bash
+curl -X PUT http://localhost:3002/api/users/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-token>" \
+  -d '{
+    "bio": "Senior software developer"
+  }'
+```
+
+### Delete User Profile
+
+```bash
+curl -X DELETE http://localhost:3002/api/users/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <your-token>"
+```
+
+## Error Handling
+
+### Gateway-Level Errors
+
+| Error | Status Code | Description |
+|-------|-------------|-------------|
+| `AuthServiceUnavailable` | 503 | Cannot reach Auth Service |
+| `UserServiceUnavailable` | 503 | Cannot reach User Service |
+| `BadRequest` | 400 | Invalid request format |
+| `InternalError` | 500 | Unexpected gateway error |
+
+### Forwarded Errors
+
+Errors from internal services are forwarded with their original status codes:
+
+| Source | Status Code | Description |
+|--------|-------------|-------------|
+| Auth Service | 401 | Invalid credentials |
+| Auth Service | 409 | User already exists |
+| User Service | 401 | Invalid token |
+| User Service | 403 | Forbidden (not owner) |
+| User Service | 404 | User not found |
+
+### Error Response Format
+
+```json
+{
+  "status": "503",
+  "message": "Auth service unavailable"
+}
+```
+
+## Request Flow
+
+### Complete Request Lifecycle
+
+```
+┌────────┐      ┌─────────┐      ┌──────────────┐      ┌──────────────┐
+│ Client │ ──►  │ Gateway │ ──►  │ User Service │ ──►  │ Auth Service │
+└────────┘      └─────────┘      └──────────────┘      └──────────────┘
+    │               │                   │                     │
+    │ GET /api/     │                   │                     │
+    │ users/123     │                   │                     │
+    │ + Auth Header │                   │                     │
+    │ ─────────────►│                   │                     │
+    │               │                   │                     │
+    │               │ GET /users/123    │                     │
+    │               │ + Auth Header     │                     │
+    │               │ ─────────────────►│                     │
+    │               │                   │                     │
+    │               │                   │ POST /validate      │
+    │               │                   │ {token}             │
+    │               │                   │ ───────────────────►│
+    │               │                   │                     │
+    │               │                   │ {valid: true}       │
+    │               │                   │ ◄───────────────────│
+    │               │                   │                     │
+    │               │ {user profile}    │                     │
+    │               │ ◄─────────────────│                     │
+    │               │                   │                     │
+    │ {user profile}│                   │                     │
+    │ ◄─────────────│                   │                     │
+```
+
+### Header Forwarding
+
+The gateway automatically forwards these headers to internal services:
+
+| Header | Purpose |
+|--------|---------|
+| `Authorization` | JWT token for authentication |
+| `Content-Type` | Request body format |
+
+## Configuration
+
+### Environment Variables (Recommended for Production)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Gateway port | 3002 |
+| `AUTH_SERVICE_URL` | Auth Service URL | http://localhost:3000 |
+| `USER_SERVICE_URL` | User Service URL | http://localhost:3001 |
+
+### Changing Service URLs
+
+In `main.rs`:
+```rust
+let auth_service_url = "http://localhost:3000".to_string();
+let user_service_url = "http://localhost:3001".to_string();
+
+// Or use environment variables:
+// let auth_service_url = std::env::var("AUTH_SERVICE_URL")
+//     .unwrap_or_else(|_| "http://localhost:3000".to_string());
+```
+
+## Service Mesh Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     SERVICE MESH                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   ┌─────────────────┐                                       │
+│   │     Client      │                                       │
+│   │ (Browser/Mobile)│                                       │
+│   └────────┬────────┘                                       │
+│            │                                                 │
+│            ▼                                                 │
+│   ┌─────────────────┐                                       │
+│   │ Gateway Service │  ◄── Single Entry Point               │
+│   │   (port 3002)   │                                       │
+│   └────────┬────────┘                                       │
+│            │                                                 │
+│      ┌─────┴─────┐                                          │
+│      ▼           ▼                                          │
+│ ┌──────────┐ ┌──────────┐                                   │
+│ │  Auth    │ │  User    │  ◄── Internal Services            │
+│ │ Service  │ │ Service  │      (Not exposed externally)     │
+│ │ (3000)   │ │ (3001)   │                                   │
+│ └──────────┘ └────┬─────┘                                   │
+│                   │                                          │
+│                   ▼                                          │
+│              ┌──────────┐                                    │
+│              │  Auth    │  ◄── Token Validation              │
+│              │ Service  │                                    │
+│              └──────────┘                                    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Port Assignments
+
+| Service | Port | Exposed |
+|---------|------|---------|
+| Auth Service | 3000 | Internal only |
+| User Service | 3001 | Internal only |
+| Gateway Service | 3002 | **Public** |
+
+## Production Considerations
+
+### Security
+- Use HTTPS for all communications
+- Implement rate limiting
+- Add request logging
+- Consider API key authentication for gateway
+
+### Reliability
+- Add health checks for internal services
+- Implement circuit breaker pattern
+- Add retry logic for failed requests
+- Consider request timeouts
+
+### Monitoring
+- Add request/response logging
+- Track latency metrics
+- Monitor service availability
+- Set up alerting
+
+
 ## License
 
 MIT License
