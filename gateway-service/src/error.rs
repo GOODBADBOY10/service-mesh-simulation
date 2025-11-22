@@ -19,8 +19,8 @@ pub enum AppError {
     #[error("User service unavailable")]
     UserServiceUnavailable,
 
-    #[error("Bad request")]
-    BadRequest,
+    // #[error("Bad request")]
+    // BadRequest,
 
     #[error("Internal server error")]
     InternalError,
@@ -37,10 +37,10 @@ impl IntoResponse for AppError {
                 StatusCode::SERVICE_UNAVAILABLE,
                 "User service unavailable",
             ),
-            AppError::BadRequest => (
-                StatusCode::BAD_REQUEST,
-                "Bad request",
-            ),
+            // AppError::BadRequest => (
+                // StatusCode::BAD_REQUEST,
+                // "Bad request",
+            // ),
             AppError::InternalError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error",

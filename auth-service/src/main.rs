@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::env;
 use crate::route::router;
 
 mod error;
@@ -11,17 +12,20 @@ mod validate;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    println!("🚀 API Server starting...");
-    
+    println!("🔐 Auth Service starting...");
+
+    // Read from environment variables with defaults
+    let host = env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+
     let app = router();
-    
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
-    
-    println!("✅ Server running on http://localhost:3000");
-    println!("📊 Health check: http://localhost:3000/");
-    println!();
-    
+
+    let addr = format!("{}:{}", host, port);
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+
+    println!("✅ Auth Service running on http://{}", addr);
+
     axum::serve(listener, app).await?;
-    
+
     Ok(())
 }

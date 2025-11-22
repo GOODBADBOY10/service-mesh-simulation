@@ -39,5 +39,5 @@ pub struct ValidateTokenRequest {
 pub struct ValidateTokenResponse {
     pub valid: bool,
     pub user_id: String,
-    pub username: String,
+    // pub username: String,
 }

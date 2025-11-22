@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # AUTH SERVICE - Authentication & JWT tokens
+  # ============================================
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+      - HOST=0.0.0.0
+      - PORT=3000
+    networks:
+      - mesh-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ============================================
+  # USER SERVICE - User profile management
+  # ============================================
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "3001:3001"
+    environment:
+      - RUST_LOG=info
+      - HOST=0.0.0.0
+      - PORT=3001
+      - AUTH_SERVICE_URL=http://auth-service:3000
+    depends_on:
+      auth-service:
+        condition: service_healthy
+    networks:
+      - mesh-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ============================================
+  # GATEWAY SERVICE - API Gateway
+  # ============================================
+  gateway-service:
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    container_name: gateway-service
+    ports:
+      - "3002:3002"
+    environment:
+      - RUST_LOG=info
+      - HOST=0.0.0.0
+      - PORT=3002
+      - AUTH_SERVICE_URL=http://auth-service:3000
+      - USER_SERVICE_URL=http://user-service:3001
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    networks:
+      - mesh-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ============================================
+  # FRONTEND - Web Dashboard
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - gateway-service
+    networks:
+      - mesh-network
+    restart: unless-stopped
+
+# ============================================
+# NETWORK
+# ============================================
+networks:
+  mesh-network:
+    driver: bridge
+    name: service-mesh-network
