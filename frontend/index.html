@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Mesh Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">🔗</div>
+            <h1>Service Mesh Dashboard</h1>
+        </div>
+        <div class="user-info hidden" id="userInfo">
+            <span class="user-badge" id="userBadge">👤 Guest</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="service-status">
+            <div class="status-card">
+                <div class="status-dot" id="gatewayStatus"></div>
+                <div class="status-info">
+                    <h3>Gateway Service</h3>
+                    <p>Port 3002</p>
+                </div>
+            </div>
+            <div class="status-card">
+                <div class="status-dot" id="authStatus"></div>
+                <div class="status-info">
+                    <h3>Auth Service</h3>
+                    <p>Port 3000</p>
+                </div>
+            </div>
+            <div class="status-card">
+                <div class="status-dot" id="userStatus"></div>
+                <div class="status-info">
+                    <h3>User Service</h3>
+                    <p>Port 3001</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <div id="authSection">
+            <div class="auth-container">
+                <div class="card" id="loginCard">
+                    <h2>🔐 Login</h2>
+                    <form onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="loginUsername" required placeholder="Enter username">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="loginPassword" required placeholder="Enter password">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Login</button>
+                    </form>
+                    <p class="auth-toggle">Don't have an account? <a onclick="showRegister()">Register</a></p>
+                </div>
+
+                <div class="card hidden" id="registerCard">
+                    <h2>📝 Register</h2>
+                    <form onsubmit="handleRegister(event)">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="regUsername" required placeholder="Choose username">
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="regEmail" required placeholder="Enter email">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="regPassword" required placeholder="Choose password">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Register</button>
+                    </form>
+                    <p class="auth-toggle">Already have an account? <a onclick="showLogin()">Login</a></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboardSection" class="hidden">
+            <div class="tabs">
+                <button class="tab active" onclick="showPanel('profile', this)">👤 My Profile</button>
+                <button class="tab" onclick="showPanel('users', this)">👥 All Users</button>
+                <button class="tab" onclick="showPanel('api', this)">🔧 API Tester</button>
+            </div>
+
+            <div class="panel active" id="profilePanel">
+                <div class="card">
+                    <h2>👤 My Profile</h2>
+                    <div id="profileContent">
+                        <div class="empty-state">
+                            <div class="icon">📋</div>
+                            <p>No profile created yet</p>
+                            <button class="btn btn-primary" style="margin-top: 1rem"
+                                onclick="showCreateProfile()">Create Profile</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card hidden" id="profileFormCard">
+                    <h2 id="profileFormTitle">✨ Create Profile</h2>
+                    <form onsubmit="handleSaveProfile(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="profileFullName" required placeholder="Your full name">
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="profileEmail" required placeholder="Your email">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Bio</label>
+                            <textarea id="profileBio" rows="3" placeholder="Tell us about yourself"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 1rem">
+                            <button type="submit" class="btn btn-primary">Save Profile</button>
+                            <button type="button" class="btn btn-secondary" onclick="hideProfileForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="panel" id="usersPanel">
+                <div class="card">
+                    <h2>👥 All Users</h2>
+                    <div id="usersContent">
+                        <div class="loading"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" id="apiPanel">
+                <div class="card">
+                    <h2>🔧 API Tester</h2>
+                    <p style="color: var(--muted); margin-bottom: 1.5rem">Test the gateway API endpoints directly</p>
+                    <div class="form-group">
+                        <label>Endpoint</label>
+                        <select id="apiEndpoint"
+                            style="width: 100%; padding: 0.75rem; background: var(--dark); border: 2px solid var(--overlay); border-radius: 8px; color: var(--light);">
+                            <option value="GET /api/users">GET /api/users - Get all users</option>
+                            <option value="POST /api/validate">POST /api/validate - Validate token</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="testApi()">🚀 Send Request</button>
+                    <div class="response-viewer" id="apiResponse">Response will appear here...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h2>✏️ Edit Profile</h2>
+            <form onsubmit="handleUpdateProfile(event)">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="editFullName" required>
+                </div>
+                <div class="form-group">
+                    <label>Bio</label>
+                    <textarea id="editBio" rows="3"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <h2>⚠️ Delete Profile</h2>
+            <p style="color: var(--muted); margin-bottom: 1rem">Are you sure you want to delete your profile? This
+                action cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
