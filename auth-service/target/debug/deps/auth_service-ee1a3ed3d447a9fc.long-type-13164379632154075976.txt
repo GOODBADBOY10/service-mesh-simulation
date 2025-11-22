@@ -1,0 +1,2 @@
+fn(axum::extract::State<Arc<AppState>>, Json<RegisterRequest>) -> impl Future<Output = Result<Json<RegisterResponse>, AppError>> {register}
+fn(axum::extract::State<Arc<AppState>>, Json<RegisterRequest>) -> impl Future<Output = Result<Json<RegisterResponse>, AppError>> {register}: Handler<_, _>
