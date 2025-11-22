@@ -310,14 +310,480 @@ pub const JWT_SECRET: &[u8] = b"your-super-secret-key-here";
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
+# 🧑‍💻 User Service
 
-## Related Services
+A protected microservice for managing user profiles, built with Rust and Axum. Part of a service mesh simulation project demonstrating inter-service communication and token-based authentication.
 
-This auth-service is part of a larger service mesh simulation:
+## 📋 Table of Contents
 
-- **auth-service** (this service) - Authentication and token management
-- **user-service** - User data management
-- **gateway-service** - API gateway and request routing
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [API Endpoints](#api-endpoints)
+- [Authentication](#authentication)
+- [Usage Examples](#usage-examples)
+- [Error Handling](#error-handling)
+- [Inter-Service Communication](#inter-service-communication)
+- [Configuration](#configuration)
+
+## Overview
+
+The User Service is responsible for managing user profile data. Unlike the Auth Service which handles credentials and tokens, this service focuses on storing and retrieving user information like names, bios, and other profile details.
+
+**Key Responsibility:** All endpoints are protected and require a valid JWT token from the Auth Service.
+
+### How It Works
+
+```
+Client Request                 User Service                 Auth Service
+     │                              │                            │
+     │  GET /users/123              │                            │
+     │  Authorization: Bearer xxx   │                            │
+     │ ────────────────────────►    │                            │
+     │                              │  POST /validate            │
+     │                              │  {token: "xxx"}            │
+     │                              │ ──────────────────────►    │
+     │                              │                            │
+     │                              │  {valid: true, user_id}    │
+     │                              │ ◄──────────────────────    │
+     │                              │                            │
+     │  {user profile data}         │                            │
+     │ ◄────────────────────────    │                            │
+```
+
+## Features
+
+- ✅ CRUD operations for user profiles
+- ✅ JWT token validation via Auth Service
+- ✅ Authorization header parsing
+- ✅ Inter-service communication with Reqwest
+- ✅ Ownership validation (users can only modify their own data)
+- ✅ Partial updates support
+- ✅ Comprehensive error handling
+- ✅ Health check endpoint
+
+## Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| **Rust** | Programming language |
+| **Axum** | Web framework |
+| **Tokio** | Async runtime |
+| **Reqwest** | HTTP client for inter-service calls |
+| **Serde** | Serialization/deserialization |
+| **chrono** | Timestamp generation |
+| **thiserror** | Error type definitions |
+| **anyhow** | Error handling in main |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      USER SERVICE                            │
+│                    (localhost:3001)                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │                    Handlers                           │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌────────┐ ┌────────────┐   │   │
+│  │  │GET user │ │GET users│ │ CREATE │ │UPDATE/DELETE│   │   │
+│  │  └────┬────┘ └────┬────┘ └───┬────┘ └─────┬──────┘   │   │
+│  └───────┼───────────┼──────────┼────────────┼──────────┘   │
+│          │           │          │            │               │
+│          ▼           ▼          ▼            ▼               │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │                  Auth Module                          │   │
+│  │         (Token extraction & validation)               │   │
+│  └───────────────────────┬──────────────────────────────┘   │
+│                          │                                   │
+│                          │ HTTP Request (Reqwest)            │
+│                          ▼                                   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Auth Service (localhost:3000)            │   │
+│  │                    POST /validate                     │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │                    AppState                           │   │
+│  │    profiles: Mutex<HashMap<String, UserProfile>>      │   │
+│  │    http_client: reqwest::Client                       │   │
+│  │    auth_service_url: String                           │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Project Structure
+
+```
+user-service/
+├── src/
+│   ├── main.rs           # Application entry point
+│   ├── route.rs          # Route definitions
+│   ├── state.rs          # Shared application state
+│   ├── error.rs          # Custom error types
+│   ├── models.rs         # Data structures
+│   ├── auth.rs           # Token validation logic
+│   ├── health_check.rs   # Health check handler
+│   └── handlers/
+│       ├── mod.rs        # Handler module exports
+│       ├── get_user.rs   # GET /users/:id
+│       ├── get_users.rs  # GET /users
+│       ├── create_user.rs# POST /users
+│       ├── update_user.rs# PUT /users/:id
+│       └── delete_user.rs# DELETE /users/:id
+├── Cargo.toml
+└── README.md
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Rust (1.70 or higher)
+- Cargo
+- Auth Service running on port 3000
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd user-service
+```
+
+2. Build the project:
+```bash
+cargo build
+```
+
+3. **Start the Auth Service first** (required):
+```bash
+cd ../auth-service
+cargo run
+# Running on http://localhost:3000
+```
+
+4. Start the User Service:
+```bash
+cd ../user-service
+cargo run
+# Running on http://localhost:3001
+```
+
+### Dependencies
+
+```toml
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
+thiserror = "1.0"
+anyhow = "1.0"
+chrono = "0.4"
+```
+
+## API Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/` | Health check | ❌ |
+| `GET` | `/users` | Get all user profiles | ✅ |
+| `POST` | `/users` | Create a new profile | ✅ |
+| `GET` | `/users/:id` | Get profile by ID | ✅ |
+| `PUT` | `/users/:id` | Update profile | ✅ (own only) |
+| `DELETE` | `/users/:id` | Delete profile | ✅ (own only) |
+
+## Authentication
+
+All protected endpoints require a valid JWT token in the Authorization header:
+
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+### Getting a Token
+
+1. Register with Auth Service:
+```bash
+curl -X POST http://localhost:3000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "alice", "email": "alice@test.com", "password": "secret123"}'
+```
+
+2. Login to get token:
+```bash
+curl -X POST http://localhost:3000/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "alice", "password": "secret123"}'
+```
+
+3. Use the returned token in User Service requests.
+
+### Token Validation Flow
+
+1. User Service extracts token from `Authorization` header
+2. Sends token to Auth Service's `/validate` endpoint
+3. Auth Service verifies signature and expiration
+4. Returns user info if valid
+5. User Service proceeds with the request or returns 401
+
+## Usage Examples
+
+### Health Check
+
+```bash
+curl http://localhost:3001/
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "service": "user-service",
+  "message": "User service is running"
+}
+```
+
+### Create User Profile
+
+```bash
+curl -X POST http://localhost:3001/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-token>" \
+  -d '{
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "alice",
+    "email": "alice@example.com",
+    "full_name": "Alice Smith",
+    "bio": "Software developer passionate about Rust"
+  }'
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "Profile created successfully"
+}
+```
+
+### Get User Profile
+
+```bash
+curl http://localhost:3001/users/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <your-token>"
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "alice",
+  "email": "alice@example.com",
+  "full_name": "Alice Smith",
+  "bio": "Software developer passionate about Rust",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### Get All Users
+
+```bash
+curl http://localhost:3001/users \
+  -H "Authorization: Bearer <your-token>"
+```
+
+**Success Response (200 OK):**
+```json
+[
+  {
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "alice",
+    "email": "alice@example.com",
+    "full_name": "Alice Smith",
+    "bio": "Software developer",
+    "created_at": "2024-01-15T10:30:00Z"
+  },
+  {
+    "user_id": "660e8400-e29b-41d4-a716-446655440001",
+    "username": "bob",
+    "email": "bob@example.com",
+    "full_name": "Bob Johnson",
+    "bio": "DevOps engineer",
+    "created_at": "2024-01-16T14:20:00Z"
+  }
+]
+```
+
+### Update User Profile (Partial Update)
+
+```bash
+curl -X PUT http://localhost:3001/users/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-token>" \
+  -d '{
+    "bio": "Senior software developer specializing in microservices"
+  }'
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "Profile updated successfully"
+}
+```
+
+### Delete User Profile
+
+```bash
+curl -X DELETE http://localhost:3001/users/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <your-token>"
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "Profile deleted successfully"
+}
+```
+
+## Error Handling
+
+### Error Types
+
+| Error | Status Code | Description |
+|-------|-------------|-------------|
+| `MissingAuthHeader` | 401 | No Authorization header provided |
+| `InvalidAuthHeader` | 401 | Header format is wrong (not "Bearer xxx") |
+| `InvalidToken` | 401 | Token is invalid or expired |
+| `UserNotFound` | 404 | Requested profile doesn't exist |
+| `UserAlreadyExists` | 409 | Profile with this ID already exists |
+| `Forbidden` | 403 | User trying to modify another user's data |
+| `AuthServiceUnavailable` | 503 | Cannot reach Auth Service |
+| `InternalError` | 500 | Unexpected server error |
+
+### Error Response Format
+
+All errors return a consistent JSON structure:
+```json
+{
+  "status": "401",
+  "message": "Invalid or expired token"
+}
+```
+
+## Inter-Service Communication
+
+### How User Service Calls Auth Service
+
+```rust
+// 1. Extract token from header
+let token = extract_token(&headers)?;
+
+// 2. Send validation request to Auth Service
+let response = http_client
+    .post("http://localhost:3000/validate")
+    .json(&ValidateTokenRequest { token })
+    .send()
+    .await?;
+
+// 3. Parse response
+let validation: ValidateTokenResponse = response.json().await?;
+
+// 4. Check if valid
+if !validation.valid {
+    return Err(AppError::InvalidToken);
+}
+```
+
+### Service Dependencies
+
+```
+┌─────────────────┐       ┌─────────────────┐
+│  User Service   │ ────► │  Auth Service   │
+│  (port 3001)    │       │  (port 3000)    │
+└─────────────────┘       └─────────────────┘
+        │
+        │ Requires Auth Service to be running
+        │ for token validation
+        ▼
+```
+
+## Configuration
+
+### Environment Variables (Recommended for Production)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | User Service port | 3001 |
+| `AUTH_SERVICE_URL` | Auth Service base URL | http://localhost:3000 |
+
+### Changing Auth Service URL
+
+In `main.rs`:
+```rust
+let auth_service_url = "http://localhost:3000".to_string();
+// Or use environment variable:
+// let auth_service_url = std::env::var("AUTH_SERVICE_URL")
+//     .unwrap_or_else(|_| "http://localhost:3000".to_string());
+```
+
+## Data Models
+
+### UserProfile
+```rust
+struct UserProfile {
+    user_id: String,      // Unique identifier
+    username: String,     // Username
+    email: String,        // Email address
+    full_name: String,    // Display name
+    bio: String,          // User biography
+    created_at: String,   // ISO 8601 timestamp
+}
+```
+
+### CreateProfileRequest
+```rust
+struct CreateProfileRequest {
+    user_id: String,
+    username: String,
+    email: String,
+    full_name: String,
+    bio: String,
+}
+```
+
+### UpdateProfileRequest
+```rust
+struct UpdateProfileRequest {
+    full_name: Option<String>,  // Optional - only update if provided
+    bio: Option<String>,        // Optional - only update if provided
+}
+```
+
+## Security Considerations
+
+### Current Implementation
+- Token validation on every request
+- Ownership checks (users can only modify their own profiles)
+- No sensitive data stored (passwords are in Auth Service)
+
+### Production Recommendations
+- Use HTTPS for all communications
+- Store Auth Service URL in environment variables
+- Add rate limiting
+- Implement request logging
+- Add circuit breaker pattern for Auth Service calls
+- Consider caching validated tokens briefly
+
 
 ## License
 
